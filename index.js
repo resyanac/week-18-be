@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
+const helmetApp = require('./middlewares/helmet');
 const connectDB = require('./config/db/db.connection');
 const userRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
@@ -10,16 +10,7 @@ const fetchRoutes = require('./routes/fetchRoutes');
 const app = express();
 
 
-app.use(helmet());
-
-
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self' https://revou-milestone-3.web.app;"
-  );
-  next();
-});
+helmetApp(app)
 
 app.use(express.json());
 
