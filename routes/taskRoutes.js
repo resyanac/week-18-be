@@ -1,5 +1,5 @@
 const express = require('express');
-const {authRole, adminAuth} = require('../middlewares/roleAccess');
+const {authRole} = require('../middlewares/roleAccess');
 const taskRoutes = express.Router();
 const {
   createTask,
@@ -14,6 +14,6 @@ taskRoutes.post('/tasks', authRole, createTask); // Create a new task
 taskRoutes.get('/tasks', authRole, getAllTask); // Get all tasks
 taskRoutes.get('/tasks/:id', authRole, getOneTask); // Get a single task by ID
 taskRoutes.put('/tasks/:id', authRole, updateTask); // Update a task's status
-taskRoutes.delete('/tasks/:id', adminAuth, deleteTask); // Soft delete a task
+taskRoutes.delete('/tasks/:id', authRole, deleteTask); // Soft delete a task
 
 module.exports = taskRoutes;

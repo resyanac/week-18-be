@@ -23,8 +23,10 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
   
 const taskSchema = new mongoose.Schema({
-  task: { type: String },
-  status: { type: String, enum: ['Not Started', 'In progress', 'Completed'], default: 'Not Started'},
+  task: { type: String, required: true },
+  priority: {type: String, required : true, enum: ['high', 'medium', 'low']},
+  status: { type: String, enum: ['not started', 'in progress', 'completed'], default: 'not started'},
+  maker : {type: String},
   dueDate: { type: Date }, 
   isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },

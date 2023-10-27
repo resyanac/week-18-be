@@ -1,21 +1,43 @@
 const { Task } = require('../config/schemas/schema');
+const { getToken, loginUser } = require('../middlewares/roleAccess');
 
 const getAllTask = async (req, res) => {
+  const decodedToken = await getToken(req)
   try {
-    const task = await Task.find({});
-
-    return res.status(200).json({
-      success: true,
-      message: 'Successfully retrieved all tasks',
-      data: task,
-    });
+    const {role, username } = loginUser(decodedToken)
+    console.log(' decoded token:', decodedToken)
+    console.log(role)
+    console.log(username)
+    const query = username ? {maker: username, isDeleted: false } : {isDeleted: false}
+    if (role == 'admin'){
+      const task = await Task.find({isDeleted:  false});
+      return res.status(200).json({
+        success: true,
+        message: 'Successfully retrieved all tasks',
+        data: task,
+      });
+    } 
+    else if ( role == 'user') {
+      const task = await Task.find({ maker : username, isDeleted: false})
+      return res.status(200).json({
+        success: true,
+        message: 'Successfully retrieved user tasks',
+        data: task,
+      });
+    }
+    else {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized please login'
+      })
+    }
   } catch (error) {
-    console.log(error);
-    return res.status(400).json({
-      success: false,
-      message: 'Failed to retrieve tasks',
-    });
-  }
+      console.log(error);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to retrieve tasks',
+      });
+    }
 };
 
 const getOneTask = async (req, res) => {
@@ -44,10 +66,19 @@ const getOneTask = async (req, res) => {
 };
 
 const createTask = async (req, res) => {
-  try {
-    const { task, dueDate } = req.body; 
-    const newTask = await Task.create({ task, dueDate }); 
+  try{
+  const decodedToken = await getToken(req)
+    if(!decodedToken) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    console.log('Decoded Token Payload:', decodedToken)
 
+    const { username } = loginUser(decodedToken)
+    console.log('username:', username);
+
+    const { task, priority, dueDate } = req.body; 
+    const newTask = await Task.create({ task, priority, maker: username, dueDate });
+    console.log(newTask); 
     return res.status(200).json({
       success: true,
       message: 'Task registration success',
@@ -58,58 +89,75 @@ const createTask = async (req, res) => {
     return res.status(500).json({ message: error });
   }
 };
-
+ 
 
 const updateTask = async (req, res) => {
+  const decodedToken = await getToken(req)
+  const {status, dueDate}= req.body
   try {
+    const {role, username } = loginUser(decodedToken)
+    console.log(' decoded token:', decodedToken)
+    console.log(role)
+    console.log(username)
     const { id } = req.params;
-    const { status, dueDate } = req.body; 
-
-    const updatedTask = await Task.findByIdAndUpdate(
-      id,
-      { $set: { status, dueDate } }, 
-      { new: true }
-    );
-
-    if (updatedTask) {
+    const task = await Task.findOne({_id : id})
+    if ( task.maker == username) {
+      const updatedTask = await Task.findByIdAndUpdate(id, {status : status, dueDate: dueDate});
       return res.status(200).json({
         success: true,
-        message: 'Successfully updated task',
+        message: 'Task updated successfully',
         data: updatedTask,
       });
-    } else {
-      return res.status(404).json({
+    } else if  (task.maker !== username) {
+      return res.status(403).json({
         success: false,
-        message: 'Task not found',
+        message: 'You are forbidden to update this task',
       });
+    } 
+    else {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to update this task'
+      })
     }
-  } catch (error) {
-    console.log('Error updating task:', error);
+  } catch (err) {
+    console.log('Error update transfer:', err);
     return res.status(500).json({
       success: false,
-      message: 'An error occurred while updating the task or Task ID has the wrong format',
+      message: 'An error occurred while soft deleting transfer data or TransferId has the wrong format',
     });
   }
 };
 
 
 const deleteTask = async (req, res) => {
+  const decodedToken = await getToken(req)
   try {
+    const {role, username } = loginUser(decodedToken)
+    console.log(' decoded token:', decodedToken)
+    console.log(role)
+    console.log(username)
     const { id } = req.params;
-
-    const deletedTask = await Task.findByIdAndUpdate(id, { $set: { isDeleted: true } }, { new: true });
-
-    if (deletedTask) {
+    const task = await Task.findOne({_id : id})
+    console.log(task.maker)
+    if ( task.maker == username) {
+      const deletedTask = await Task.findByIdAndUpdate(id, { $set: { isDeleted: true } }, { new: true });
       return res.status(200).json({
         success: true,
         message: 'Task deleted successfully',
         data: deletedTask,
       });
-    } else {
-      return res.status(404).json({
+    } else if (task.maker !== username) {
+      return res.status(403).json({
         success: false,
-        message: 'Task not found',
+        message: 'You are forbidden to delete this task',
       });
+    } 
+    else {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to delete this task'
+      })
     }
   } catch (err) {
     console.log('Error soft deleting transfer:', err);
